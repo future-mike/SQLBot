@@ -189,3 +189,9 @@ test.py
 
 
 !/.venv/
+
+.cursor/
+
+/data/
+
+gen_1000.sql
