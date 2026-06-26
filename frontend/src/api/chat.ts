@@ -39,6 +39,7 @@ export class ChatRecord {
   question?: string
   sql_answer?: string
   sql?: string
+  datasource?: number
   data?: string | any
   chart_answer?: string
   chart?: string
@@ -67,6 +68,7 @@ export class ChatRecord {
     question: string,
     sql_answer: string | undefined,
     sql: string | undefined,
+    datasource: number | undefined,
     data: string | any | undefined,
     chart_answer: string | undefined,
     chart: string | undefined,
@@ -94,6 +96,7 @@ export class ChatRecord {
     question?: string,
     sql_answer?: string,
     sql?: string,
+    datasource?: number | undefined,
     data?: string | any,
     chart_answer?: string,
     chart?: string,
@@ -120,6 +123,7 @@ export class ChatRecord {
     this.question = question
     this.sql_answer = sql_answer
     this.sql = sql
+    this.datasource = datasource
     this.data = data
     this.chart_answer = chart_answer
     this.chart = chart
@@ -263,6 +267,7 @@ const toChatRecord = (data?: any): ChatRecord | undefined => {
     data.question,
     data.sql_answer,
     data.sql,
+    data.datasource,
     data.data,
     data.chart_answer,
     data.chart,
@@ -300,8 +305,10 @@ export class ChatLogHistoryItem {
   duration?: number | undefined
   total_tokens?: number | undefined
   operate?: string | undefined
+  operate_key?: string | undefined
   local_operation?: boolean | undefined
   error?: boolean | undefined
+  message?: any
 
   constructor()
   constructor(
@@ -311,7 +318,8 @@ export class ChatLogHistoryItem {
     total_tokens: number | undefined,
     operate: string | undefined,
     local_operation: boolean | undefined,
-    error: boolean | undefined
+    error: boolean | undefined,
+    message: any | undefined
   )
   constructor(
     start_time?: Date | string,
@@ -320,15 +328,18 @@ export class ChatLogHistoryItem {
     total_tokens?: number | undefined,
     operate?: string | undefined,
     local_operation?: boolean | undefined,
-    error?: boolean | undefined
+    error?: boolean | undefined,
+    message?: any | undefined
   ) {
     this.start_time = getDate(start_time)
     this.finish_time = getDate(finish_time)
     this.duration = duration
     this.total_tokens = total_tokens
+    this.operate_key = operate
     this.operate = t('chat.log.' + operate)
     this.local_operation = !!local_operation
     this.error = !!error
+    this.message = message
   }
 }
 
@@ -373,7 +384,8 @@ const toChatLogHistoryItem = (data?: any): any | undefined => {
     data.total_tokens,
     data.operate,
     data.local_operation,
-    data.error
+    data.error,
+    data.message
   )
 }
 

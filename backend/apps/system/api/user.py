@@ -176,11 +176,12 @@ async def user_create(session: SessionDep, creator: UserCreator, trans: Trans):
 async def create(session: SessionDep, creator: UserCreator, trans: Trans):
     if check_account_exists(session=session, account=creator.account):
         raise Exception(trans('i18n_exist', msg = f"{trans('i18n_user.account')} [{creator.account}]"))
-    if check_email_exists(session=session, email=creator.email):
-        raise Exception(trans('i18n_exist', msg = f"{trans('i18n_user.email')} [{creator.email}]"))
+    """ if check_email_exists(session=session, email=creator.email):
+        raise Exception(trans('i18n_exist', msg = f"{trans('i18n_user.email')} [{creator.email}]")) """
     if not check_email_format(creator.email):
         raise Exception(trans('i18n_format_invalid', key = f"{trans('i18n_user.email')} [{creator.email}]"))
-    data = creator.model_dump(exclude_unset=True)
+    #data = creator.model_dump(exclude_unset=True)
+    data = creator.model_dump()
     user_model = UserModel.model_validate(data)
     #user_model.create_time = get_timestamp()
     user_model.language = "zh-CN"
@@ -215,30 +216,40 @@ async def update(session: SessionDep, editor: UserEditor, trans: Trans):
         raise Exception(f"User with id [{editor.id}] not found!")
     if editor.account != user_model.account:
         raise Exception(f"account cannot be changed!")
-    if editor.email != user_model.email and check_email_exists(session=session, email=editor.email):
-        raise Exception(trans('i18n_exist', msg = f"{trans('i18n_user.email')} [{editor.email}]"))
+    """ if editor.email != user_model.email and check_email_exists(session=session, email=editor.email):
+        raise Exception(trans('i18n_exist', msg = f"{trans('i18n_user.email')} [{editor.email}]")) """
     if not check_email_format(editor.email):
         raise Exception(trans('i18n_format_invalid', key = f"{trans('i18n_user.email')} [{editor.email}]"))
     origin_oid: int = user_model.oid
-    del_stmt = sqlmodel_delete(UserWsModel).where(UserWsModel.uid == editor.id)
-    session.exec(del_stmt)
+    
+    uws_list_stmt = select(UserWsModel).where(UserWsModel.uid == editor.id)
+    uws_list = session.exec(uws_list_stmt).all()
+    
+    existing_oids = {uws.oid for uws in uws_list}
+    new_oid_set = set(editor.oid_list) if editor.oid_list else set()
+    oids_to_remove = existing_oids - new_oid_set
+    oids_to_add = new_oid_set - existing_oids
+    
+    if oids_to_remove:
+        del_stmt = sqlmodel_delete(UserWsModel).where(UserWsModel.uid == editor.id, UserWsModel.oid.in_(oids_to_remove))
+        session.exec(del_stmt)
     
     data = editor.model_dump(exclude_unset=True)
     user_model.sqlmodel_update(data)
     
     user_model.oid = 0
     if editor.oid_list:
-        # need to validate oid_list
-        db_model_list = [
-            UserWsModel.model_validate({
-                "oid": oid,
-                "uid": user_model.id,
-                "weight": 0
-            })
-            for oid in editor.oid_list
-        ]
-        session.add_all(db_model_list)
         user_model.oid = origin_oid if origin_oid in editor.oid_list else  editor.oid_list[0]
+        if oids_to_add:
+            db_uws_model_list = [
+                UserWsModel.model_validate({
+                    "oid": oid,
+                    "uid": user_model.id,
+                    "weight": 0
+                })
+                for oid in oids_to_add
+            ]
+            session.add_all(db_uws_model_list)
     session.add(user_model)
 
 @router.delete("/{id}", summary=f"{PLACEHOLDER_PREFIX}user_del_api", description=f"{PLACEHOLDER_PREFIX}user_del_api")
@@ -262,7 +273,7 @@ async def batch_del(session: SessionDep, id_list: list[int]):
 @clear_cache(namespace=CacheNamespace.AUTH_INFO, cacheName=CacheName.USER_INFO, keyExpression="current_user.id")
 async def langChange(session: SessionDep, current_user: CurrentUser, trans: Trans, language: UserLanguage):
     lang = language.language
-    if lang not in ["zh-CN", "en", "ko-KR"]:
+    if lang not in ["zh-CN", "zh-TW", "en", "ko-KR"]:
         raise Exception(trans('i18n_user.language_not_support', key = lang))
     db_user: UserModel = get_db_user(session=session, user_id=current_user.id)
     db_user.language = lang

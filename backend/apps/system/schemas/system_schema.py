@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional,List
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -32,7 +32,7 @@ class BaseUser(BaseModel):
 
 
 class BaseUserDTO(BaseUser, BaseCreatorDTO):
-    language: str = Field(pattern=r"^(zh-CN|en|ko-KR)$", default="zh-CN", description="用户语言")
+    language: str = Field(pattern=r"^(zh-CN|zh-TW|en|ko-KR)$", default="zh-CN", description="用户语言")
     password: str
     status: int = 1
     origin: int = 0
@@ -47,8 +47,8 @@ class BaseUserDTO(BaseUser, BaseCreatorDTO):
 
     @field_validator("language")
     def validate_language(cls, lang: str) -> str:
-        if not re.fullmatch(r"^(zh-CN|en|ko-KR)$", lang):
-            raise ValueError("Language must be 'zh-CN', 'en', or 'ko-KR'")
+        if not re.fullmatch(r"^(zh-CN|zh-TW|en|ko-KR)$", lang):
+            raise ValueError("Language must be 'zh-CN', 'zh-TW', 'en', or 'ko-KR'")
         return lang
 
 
@@ -58,6 +58,7 @@ class UserCreator(BaseUser):
     status: int = Field(default=1, description=f"{PLACEHOLDER_PREFIX}status")
     origin: Optional[int] = Field(default=0, description=f"{PLACEHOLDER_PREFIX}origin")
     oid_list: Optional[list[int]] = Field(default=None, description=f"{PLACEHOLDER_PREFIX}oid")
+    system_variables: Optional[List] = Field(default=[])
 
     """ @field_validator("email")
     def validate_email(cls, lang: str) -> str:
@@ -110,6 +111,8 @@ class AssistantBase(BaseModel):
     configuration: Optional[str] = Field(default=None, description=f"{PLACEHOLDER_PREFIX}assistant_configuration")
     description: Optional[str] = Field(default=None, description=f"{PLACEHOLDER_PREFIX}assistant_description")
     oid: Optional[int] = Field(default=1, description=f"{PLACEHOLDER_PREFIX}oid")
+    enable_custom_model: Optional[bool] = Field(default=False, description=f"{PLACEHOLDER_PREFIX}enable_custom_model")
+    custom_model: Optional[str] = Field(description=f"{PLACEHOLDER_PREFIX}custom_model")
 
 
 class AssistantDTO(AssistantBase, BaseCreatorDTO):
@@ -193,6 +196,8 @@ class AssistantOutDsSchema(AssistantOutDsBase):
     password: Optional[str] = None
     db_schema: Optional[str] = None
     extraParams: Optional[str] = None
+    mode: Optional[str] = None
+    lowVersion: Optional[bool] = False
     tables: Optional[list[AssistantTableSchema]] = None
 
 

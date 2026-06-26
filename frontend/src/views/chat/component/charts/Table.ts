@@ -1,19 +1,74 @@
 import { BaseChart, type ChartAxis, type ChartData } from '@/views/chat/component/BaseChart.ts'
 import {
   copyToClipboard,
-  type Node,
   type S2DataConfig,
   S2Event,
   type S2MountContainer,
   type S2Options,
   type SortMethod,
   TableSheet,
+  type SortFuncParam,
 } from '@antv/s2'
-import { debounce, filter } from 'lodash-es'
+import { debounce, filter, includes } from 'lodash-es'
 import { i18n } from '@/i18n'
+import { formatNumber } from '@/views/chat/component/charts/utils.ts'
 import '@antv/s2/dist/s2.min.css'
 
 const { t } = i18n.global
+
+const createSmartSortFunc = (sortMethod: string) => {
+  const compareNumericString = (a: string, b: string): number => {
+    const isNegA = a.startsWith('-')
+    const isNegB = b.startsWith('-')
+
+    // 负数 < 正数
+    if (isNegA && !isNegB) return -1
+    if (!isNegA && isNegB) return 1
+
+    const [intA, decA = ''] = isNegA ? a.slice(1).split('.') : a.split('.')
+    const [intB, decB = ''] = isNegB ? b.slice(1).split('.') : b.split('.')
+
+    // 都是正数
+    if (!isNegA && !isNegB) {
+      if (intA.length !== intB.length) return intA.length - intB.length
+      const intCmp = intA.localeCompare(intB)
+      if (intCmp !== 0) return intCmp
+      if (decA && decB) return decA.localeCompare(decB)
+      return decA ? 1 : decB ? -1 : 0
+    }
+
+    // 都是负数：绝对值大的实际值小，比较结果取反
+    if (intA.length !== intB.length) return -(intA.length - intB.length)
+    const intCmp = intA.localeCompare(intB)
+    if (intCmp !== 0) return -intCmp
+    if (decA && decB) return -decA.localeCompare(decB)
+    return decA ? 1 : decB ? -1 : 0
+  }
+
+  return (params: SortFuncParam) => {
+    const { data, sortFieldId } = params
+    if (!data || data.length === 0) return data
+    const isAsc = sortMethod.toLowerCase() === 'asc'
+    return [...data].sort((a: any, b: any) => {
+      const valA = a[sortFieldId],
+        valB = b[sortFieldId]
+      if (valA == null) return isAsc ? -1 : 1
+      if (valB == null) return isAsc ? 1 : -1
+      const strA = String(valA),
+        strB = String(valB)
+      const isNumA = !isNaN(Number(strA)) && strA.trim() !== ''
+      const isNumB = !isNaN(Number(strB)) && strB.trim() !== ''
+      if (isNumA && !isNumB) return isAsc ? -1 : 1
+      if (!isNumA && isNumB) return isAsc ? 1 : -1
+      if (isNumA && isNumB) {
+        const cmp = compareNumericString(strA, strB)
+        return isAsc ? cmp : -cmp
+      }
+      const cmp = strA.localeCompare(strB)
+      return isAsc ? cmp : -cmp
+    })
+  }
+}
 
 export class Table extends BaseChart {
   table?: TableSheet = undefined
@@ -45,10 +100,11 @@ export class Table extends BaseChart {
     }
   }
 
-  init(axis: Array<ChartAxis>, data: Array<ChartData>) {
+  init(axis: Array<ChartAxis>, data: Array<ChartData>, formatNumberFields: Array<string>) {
     super.init(
       filter(axis, (a) => !a.hidden), //隐藏多指标的other-info列
-      data
+      data,
+      formatNumberFields
     )
 
     const s2DataConfig: S2DataConfig = {
@@ -66,18 +122,68 @@ export class Table extends BaseChart {
           return {
             field: a.value,
             name: a.name,
+            formatter: (value: any) => {
+              const formatted = a.formatNumber ? formatNumber(value) : value
+              return String(formatted)
+            },
           }
         }) ?? [],
       data: this.data,
     }
 
+    const sortState: Record<string, string> = {}
+
+    const handleSortClick = (params: any) => {
+      const { meta } = params
+      const s2 = meta.spreadsheet
+      if (s2 && meta.isLeaf) {
+        const fieldId = meta.field
+        const currentMethod = sortState[fieldId] || 'none'
+        const sortOrder = ['none', 'desc', 'asc']
+        const nextMethod = sortOrder[(sortOrder.indexOf(currentMethod) + 1) % sortOrder.length]
+        sortState[fieldId] = nextMethod
+        if (nextMethod === 'none') {
+          s2.emit(S2Event.RANGE_SORT, [{ sortFieldId: fieldId, sortMethod: 'none' as SortMethod }])
+        } else {
+          s2.emit(S2Event.RANGE_SORT, [
+            {
+              sortFieldId: fieldId,
+              sortMethod: nextMethod as SortMethod,
+              sortFunc: createSmartSortFunc(nextMethod),
+            },
+          ])
+        }
+        s2.render()
+      }
+    }
+
     const s2Options: S2Options = {
       width: 600,
       height: 360,
-      showDefaultHeaderActionIcon: true,
+      showDefaultHeaderActionIcon: false,
+      headerActionIcons: [
+        {
+          icons: ['GlobalDesc'],
+          belongsCell: 'colCell',
+          displayCondition: (node: any) => node.isLeaf && sortState[node.field] === 'desc',
+          onClick: handleSortClick,
+        },
+        {
+          icons: ['GlobalAsc'],
+          belongsCell: 'colCell',
+          displayCondition: (node: any) => node.isLeaf && sortState[node.field] === 'asc',
+          onClick: handleSortClick,
+        },
+        {
+          icons: ['SortDown'],
+          belongsCell: 'colCell',
+          displayCondition: (node: any) =>
+            node.isLeaf && (!sortState[node.field] || sortState[node.field] === 'none'),
+          onClick: handleSortClick,
+        },
+      ],
       tooltip: {
         operation: {
-          // 开启组内排序
           sort: true,
         },
         dataCell: {
@@ -96,77 +202,11 @@ export class Table extends BaseChart {
             container.style.fontSize = '14px'
             container.style.whiteSpace = 'pre-wrap'
 
-            const text = document.createTextNode(meta.fieldValue)
+            const formattedValue = includes(this.formatNumberFields, meta.valueField)
+              ? formatNumber(meta.fieldValue)
+              : meta.fieldValue
+            const text = document.createTextNode(String(formattedValue))
             container.appendChild(text)
-
-            return container
-          },
-        },
-        colCell: {
-          enable: true,
-          content: (cell) => {
-            const meta = cell.getMeta()
-            const { spreadsheet: s2 } = meta
-            if (!meta.isLeaf) {
-              return null
-            }
-
-            // 创建类似Element Plus下拉菜单的结构
-            const container = document.createElement('div')
-            container.className = 'el-dropdown'
-            container.style.padding = '8px 0'
-            container.style.minWidth = '100px'
-
-            const menuItems = [
-              {
-                label: t('chat.sort_desc'),
-                method: 'desc' as SortMethod,
-                icon: 'el-icon-sort-down',
-              },
-              { label: t('chat.sort_asc'), method: 'asc' as SortMethod, icon: 'el-icon-sort-up' },
-              { label: t('chat.sort_none'), method: 'none' as SortMethod, icon: 'el-icon-close' },
-            ]
-
-            menuItems.forEach((item) => {
-              const itemEl = document.createElement('div')
-              itemEl.className = 'el-dropdown-menu__item'
-              itemEl.style.display = 'flex'
-              itemEl.style.alignItems = 'center'
-              itemEl.style.padding = '8px 16px'
-              itemEl.style.cursor = 'pointer'
-              itemEl.style.color = '#606266'
-              itemEl.style.fontSize = '14px'
-
-              // 鼠标悬停效果
-              itemEl.addEventListener('mouseenter', () => {
-                itemEl.style.backgroundColor = '#f5f7fa'
-                itemEl.style.color = '#409eff'
-              })
-              itemEl.addEventListener('mouseleave', () => {
-                itemEl.style.backgroundColor = 'transparent'
-                itemEl.style.color = '#606266'
-              })
-
-              // 添加图标（如果需要）
-              if (item.icon) {
-                const icon = document.createElement('i')
-                icon.className = item.icon
-                icon.style.marginRight = '8px'
-                icon.style.fontSize = '16px'
-                itemEl.appendChild(icon)
-              }
-
-              const text = document.createTextNode(item.label)
-              itemEl.appendChild(text)
-
-              itemEl.addEventListener('click', (e) => {
-                e.stopPropagation()
-                s2.groupSortByMethod(item.method, meta as Node)
-                // 可以在这里添加关闭tooltip的逻辑
-              })
-
-              container.appendChild(itemEl)
-            })
 
             return container
           },
@@ -176,8 +216,8 @@ export class Table extends BaseChart {
       interaction: {
         copy: {
           enable: true,
-          withFormat: true,
-          withHeader: true,
+          withFormat: false,
+          withHeader: false,
         },
         brushSelection: {
           dataCell: true,

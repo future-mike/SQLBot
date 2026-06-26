@@ -7,6 +7,62 @@
     "AI Model Configuration": "AI Model Config",
     "Details": "Details"
   },
+  "variables": {
+    "please_select_date": "Please select a date",
+    "number_variable_error": "Please enter the correct numerical range.",
+    "built_in": "Built-in",
+    "normal_value": "Normal value",
+    "​​cannot_be_empty": "Variable values ​​cannot be empty.",
+    "1_to_100": "{name}, the numerical range is {min} to {max}.",
+    "1_to_100_de": "{name}, the date range is {min} to {max}.",
+    "system_variables": "System Variables",
+    "variables": "Variables",
+    "system": "System",
+    "search_variables": "Search Variables",
+    "add_variable": "Add Variable",
+    "variable_name": "Variable Name",
+    "variable_type": "Variable Type",
+    "variable_value": "Variable Value",
+    "edit_variable": "Edit Variable",
+    "no_variables_yet": "No Variables Yet",
+    "please_enter_value": "Please Enter Value",
+    "date": "Date",
+    "start_date": "Start Date",
+    "end_date": "End Date",
+    "enter_variable_name": "Please Enter Variable Name",
+    "enter_variable_value": "Please Enter Variable Value"
+  },
+  "authorized_space": {
+    "authorized_space": "Authorized Space",
+    "authorized_space_list": "Authorized Space List",
+    "select_space": "Select Space",
+    "modify_authorized_space": "Modify Authorized Space",
+    "workspaces_authorized": "Authorized {num} Workspaces",
+    "number_of_members": "Number of Members",
+    "delete_selected_workspaces": "Are you sure you want to delete the selected {msg} workspaces?",
+    "delete_workspace": "Are you sure you want to delete the workspace: {msg}?",
+    "no_workspace": "No Workspaces"
+  },
+  "sync": {
+    "records": "Displaying {num} records out of {total}",
+    "confirm_upload": "Confirm Upload",
+    "field_details": "Field Details",
+    "integration": "Platform integration needs to be enabled.",
+    "the_existing_user": "If the user already exists, overwrite the existing user.",
+    "lazy_load": "Lazy Load",
+    "sync_users": "Sync Users",
+    "sync_wechat_users": "Sync WeChat Users",
+    "sync_dingtalk_users": "Sync DingTalk Users",
+    "sync_lark_users": "Sync Lark Users",
+    "sync_complete": "Sync Complete",
+    "synced_10_users": "Successfully synced {num} users",
+    "failed_3_users": "Successfully synced {success} users, sync failed {failed} users",
+    "download_failure_list": "Download Failure List",
+    "sync_failed": "Sync Failed",
+    "failed_10_users": "Sync failed {num} users",
+    "continue_syncing": "Continue Syncing",
+    "return_to_view": "Return to View"
+  },
   "parameter": {
     "execution_details": "Execution Details",
     "overview": "Overview",
@@ -21,11 +77,14 @@
     "context_record_count_hint": "Number of user question rounds",
     "model_thinking_process": "Expand Model Thinking Process",
     "rows_of_data": "Limit 1000 Rows of Data",
-    "third_party_platform_settings": "Third-Party Platform Settings",
-    "by_third_party_platform": "Automatic User Creation by Third-Party Platform",
-    "platform_user_organization": "Third-Party Platform Workspace",
+    "third_party_platform_settings": "Authentication Settings",
+    "by_third_party_platform": "Automatic User Creation",
+    "platform_user_organization": "Default Workspace",
     "platform_user_roles": "Third-Party Platform User Roles",
     "excessive_data_volume": "Disabling the 1000-row data limit may cause system lag due to excessive data volume.",
+    "sqlbot_name": "Data Query Assistant Name",
+    "show_sql": "Allow Viewing SQL Statements",
+    "show_log": "Show Execution Log",
     "prompt": "Prompt",
     "disabling_successfully": "Disabling Successfully",
     "closed_by_default": "In the Question Count window, control whether the model thinking process is expanded or closed by default.",
@@ -131,6 +190,7 @@
     "system_manage": "System Management",
     "update_success": "Update",
     "save_success": "Save Successful",
+    "operation_success": "Operation successful",
     "next": "Next",
     "save": "Save",
     "logout": "Logout",
@@ -157,7 +217,8 @@
     "password_reset_successful": "Password reset successful",
     "or": "Or",
     "refresh": "Refresh",
-    "input_limit": "Length cannot exceed {0} characters"
+    "input_limit": "Length cannot exceed {0} characters",
+    "file_size_limit_error": "File size exceeds the limit (maximum {limit})"
   },
   "dashboard": {
     "open_dashboard": "Open Dashboard",
@@ -347,12 +408,18 @@
         "success": "Connect success",
         "failed": "Connect failed"
       },
-      "timeout": "Timeout(second)",
-      "address": "Address"
+      "timeout": "Connection Timeout(second)",
+      "address": "Address",
+      "low_version": "Compatible with lower versions",
+      "ssl": "Enable SSL",
+      "file_path": "File Path"
     },
-    "sync_fields": "Sync Fields"
+    "sync_fields": "Sync Fields",
+    "sync_fields_success": "Sync fields successfully",
+    "sync_fields_failed": "Sync fields failed"
   },
   "datasource": {
+    "recommended_question": "Recommended Question",
     "recommended_repetitive_tips": "Duplicate questions exist",
     "recommended_problem_tips": "Custom configuration requires at least one problem, each problem should be 2-200 characters",
     "recommended_problem_configuration": "Recommended Problem Configuration",
@@ -397,6 +464,9 @@
     "get_schema": "Get Schema"
   },
   "model": {
+    "int": "Integer",
+    "float": "Float",
+    "string": "String",
     "default_model": "Default model",
     "model_type": "Model type",
     "basic_model": "Basic model",
@@ -514,6 +584,7 @@
     "member_feng_yibudao": "Do you want to remove the member: {msg}?",
     "select_member": "Select member",
     "selected_2_people": "Selected: {msg} people",
+    "selected_number": "Selected: {msg} items",
     "clear": "Clear",
     "historical_dialogue": "No historical dialogue",
     "rename_a_workspace": "Rename a workspace",
@@ -531,6 +602,7 @@
     "operate_with_caution": "After deletion, the users under the workspace will be removed and all resources will be deleted. Please operate with caution."
   },
   "permission": {
+    "search_field": "Search field",
     "search_rule_group": "Search rule group",
     "add_rule_group": "Add rule group",
     "permission_rule": "Permission rules",
@@ -613,6 +685,10 @@
     "application_name": "Application name",
     "application_description": "Application description",
     "cross_domain_settings": "Cross-domain settings",
+    "enableCustomModel": "Use specified model",
+    "useModel": "Use model",
+    "defaultModel": "Default model",
+    "customModel": "Specified model",
     "third_party_address": "Please enter the embedded third party address,multiple items separated by semicolons",
     "set_to_private": "Set as private",
     "set_to_public": "Set as public",
@@ -623,7 +699,7 @@
     "interface_url": "Interface URL",
     "format_is_incorrect": "format is incorrect{msg}",
     "domain_format_incorrect": ", start with http:// or https://, no trailing slash (/), multiple domains separated by semicolons",
-    "interface_url_incorrect": ",enter a relative path starting with /",
+    "interface_url_incorrect": ", enter a relative path starting with /, or an absolute path starting with http:// or https://",
     "aes_enable": "Enable AES encryption",
     "aes_enable_tips": "The fields (host, user, password, dataBase, schema) are all encrypted using the AES-CBC-PKCS5Padding encryption method",
     "bit": "bit",
@@ -663,7 +739,7 @@
     "display_settings": "Display Settings",
     "header_text_color": "Header Text Color",
     "app_logo": "App Logo",
-    "maximum_size_10mb": "Recommended size: 32 x 32, supports JPG, PNG, and SVG, maximum size: 10MB",
+    "maximum_size_10mb": "Recommended size: 32 x 32, supports JPG, PNG, maximum size: 10MB",
     "replace": "Replace",
     "default_icon_position": "Default Icon Position",
     "draggable_position": "Draggable Position",
@@ -687,6 +763,8 @@
       "line": "Line",
       "pie": "Pie"
     },
+    "hide_label": "Hide Label",
+    "show_label": "Show Label",
     "sort_asc": "Ascending",
     "sort_desc": "Descending",
     "sort_none": "No Sort",
@@ -710,6 +788,8 @@
     "no_data": "No Data",
     "loading_data": "Loading ...",
     "show_error_detail": "Show error info",
+    "thousands_separator_setting": "Thousands Separator Setting",
+    "thousands_separator_display": "Apply Thousands Separator Display",
     "log": {
       "GENERATE_SQL": "Generate SQL",
       "GENERATE_CHART": "Generate Chart Structure",
@@ -724,7 +804,16 @@
       "FILTER_CUSTOM_PROMPT": "Match Custom Prompts",
       "EXECUTE_SQL": "Execute SQL",
       "GENERATE_PICTURE": "Generate Picture"
-    }
+    },
+    "log_system": "Conversation Template",
+    "log_question": "Current Question",
+    "log_answer": "AI Response",
+    "log_history": "History",
+    "find_term_title": "Matched {0} terms",
+    "find_sql_sample_title": "Matched {0} SQL examples",
+    "find_custom_prompt_title": "Matched {0} custom prompts",
+    "query_count_title": "Found {0} data entries",
+    "generate_picture_success": "Image generated"
   },
   "about": {
     "title": "About",
@@ -765,11 +854,11 @@
     "website_logo": "Website Logo",
     "tab": "Tab",
     "replace_image": "Replace Image",
-    "larger_than_200kb": "Logo displayed at the top of the website: Recommended size: 48 x 48 pixels, supports JPG, PNG, and SVG, and no larger than 200KB",
+    "larger_than_200kb": "Logo displayed at the top of the website: Recommended size: 48 x 48 pixels, supports JPG, PNG, and no larger than 200KB",
     "login_logo": "System Logo",
-    "larger_than_200kb_de": "Logo on the right side of the login page: Recommended size: 204 x 52 pixels, supports JPG, PNG, and SVG, and no larger than 200KB",
+    "larger_than_200kb_de": "Logo on the right side of the login page: Recommended size: 204 x 52 pixels, supports JPG, PNG, and no larger than 200KB",
     "login_background_image": "Login Background Image",
-    "larger_than_5mb": "Background image on the left: Recommended size: 576 x 900 for vector images, 1152 x 1800 for bitmap images, supports JPG, PNG, and SVG, and no larger than 5MB",
+    "larger_than_5mb": "Background image on the left: Recommended size: 576 x 900 for vector images, 1152 x 1800 for bitmap images, supports JPG, PNG, and no larger than 5MB",
     "website_name": "Website Name",
     "on_webpage_tabs": "Platform name displayed on webpage tabs",
     "welcome_message": "Display a welcome message",
@@ -845,7 +934,8 @@
     "redirect_2_auth": "Redirecting to {0} authentication, {1} seconds...",
     "redirect_immediately": "Redirecting immediately",
     "permission_invalid": "Authentication invalid [Current account has insufficient permissions]",
-    "scan_qr_login": " Scan QR Code"
+    "scan_qr_login": " Scan QR Code",
+    "no_auth_error": "Not authenticated. Redirecting to login page in {0} seconds..."
   },
   "supplier": {
     "alibaba_cloud_bailian": "Alibaba Cloud Bailian",
@@ -858,6 +948,7 @@
     "kimi": "Kimi",
     "tencent_cloud": "Tencent Cloud",
     "volcano_engine": "Volcano Engine",
+    "minimax": "MiniMax",
     "generic_openai": "Generic OpenAI"
   },
   "modelType": {

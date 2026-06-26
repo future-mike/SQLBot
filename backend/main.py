@@ -70,7 +70,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    openapi_url=f"{settings.CONTEXT_PATH}/openapi.json" if settings.SQLBOT_DOC_ENABLED else None,
     generate_unique_id_function=custom_generate_unique_id,
     lifespan=lifespan,
     docs_url=None,
@@ -152,24 +152,25 @@ def generate_openapi_for_lang(lang: str) -> Dict[str, Any]:
 
 
 # custom /openapi.json and /docs
-@app.get("/openapi.json", include_in_schema=False)
-async def custom_openapi(request: Request):
-    lang = get_language_from_request(request)
-    schema = generate_openapi_for_lang(lang)
-    return JSONResponse(schema)
+if settings.SQLBOT_DOC_ENABLED:
+    @app.get(f"{settings.CONTEXT_PATH}/openapi.json", include_in_schema=False)
+    async def custom_openapi(request: Request):
+        lang = get_language_from_request(request)
+        schema = generate_openapi_for_lang(lang)
+        return JSONResponse(schema)
 
 
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui(request: Request):
-    lang = get_language_from_request(request)
-    from fastapi.openapi.docs import get_swagger_ui_html
-    return get_swagger_ui_html(
-        openapi_url=f"/openapi.json?lang={lang}",
-        title="SQLBot API Docs",
-        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
-        swagger_js_url="/swagger-ui-bundle.js",
-        swagger_css_url="/swagger-ui.css",
-    )
+    @app.get(f"{settings.CONTEXT_PATH}/docs", include_in_schema=False)
+    async def custom_swagger_ui(request: Request):
+        lang = get_language_from_request(request)
+        from fastapi.openapi.docs import get_swagger_ui_html
+        return get_swagger_ui_html(
+            openapi_url=f"./openapi.json?lang={lang}",
+            title="SQLBot API Docs",
+            swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+            swagger_js_url="./swagger-ui-bundle.js",
+            swagger_css_url="./swagger-ui.css",
+        )
 
 
 mcp_app = FastAPI()
@@ -184,7 +185,7 @@ mcp = FastApiMCP(
     description="SQLBot MCP Server",
     describe_all_responses=True,
     describe_full_response_schema=True,
-    include_operations=["mcp_datasource_list", "get_model_list", "mcp_question", "mcp_start", "mcp_assistant"]
+    include_operations=["mcp_datasource_list", "get_model_list", "mcp_question", "mcp_start", "mcp_assistant", "mcp_ws_list"]
 )
 
 mcp.mount(mcp_app)

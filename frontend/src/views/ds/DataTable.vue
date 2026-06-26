@@ -190,6 +190,15 @@ const editTable = () => {
   tableComment.value = currentTable.value.custom_comment
   tableDialog.value = true
 }
+const changeChecked = () => {
+  datasourceApi.saveTable(currentTable.value).then(() => {
+    ElMessage({
+      message: t('common.save_success'),
+      type: 'success',
+      showClose: true,
+    })
+  })
+}
 const saveTable = () => {
   currentTable.value.custom_comment = tableComment.value
   datasourceApi.saveTable(currentTable.value).then(() => {
@@ -253,10 +262,12 @@ const syncFields = () => {
     .syncFields(currentTable.value.id)
     .then(() => {
       btnSelectClick('d')
+      ElMessage.success(t('ds.sync_fields_success'))
       loading.value = false
     })
     .catch(() => {
       loading.value = false
+      ElMessage.warning(t('ds.sync_fields_failed'))
     })
 }
 
@@ -364,7 +375,7 @@ const btnSelectClick = (val: any) => {
       </el-icon>
       <div class="name">{{ info.name }}</div>
       <div class="export-remark">
-        <el-button style="margin-right: 12px" @click="downloadTemplate" secondary>
+        <el-button style="margin-right: 12px" secondary @click="downloadTemplate">
           <template #icon>
             <icon_import_outlined></icon_import_outlined>
           </template>
@@ -381,10 +392,17 @@ const btnSelectClick = (val: any) => {
         <div class="select-table_top">
           {{ $t('ds.tables') }}
 
-          <el-tooltip effect="dark" :content="$t('ds.form.choose_tables')" placement="top">
-            <el-icon size="18" @click="handleSelectTableList">
-              <icon_form_outlined></icon_form_outlined>
-            </el-icon>
+          <el-tooltip
+            effect="dark"
+            offset="10"
+            :content="$t('ds.form.choose_tables')"
+            placement="top"
+          >
+            <el-button style="margin-right: -4px" text @click="handleSelectTableList">
+              <el-icon size="18">
+                <icon_form_outlined></icon_form_outlined>
+              </el-icon>
+            </el-button>
           </el-tooltip>
         </div>
         <el-input
@@ -466,7 +484,27 @@ const btnSelectClick = (val: any) => {
         class="info-table"
       >
         <div class="table-name">
-          <div class="name">{{ currentTable.table_name }}</div>
+          <div class="name">
+            {{ currentTable.table_name }}
+            <div
+              style="
+                display: inline-flex;
+                align-items: center;
+                margin-left: 30px;
+                font-size: 14px;
+                font-weight: 400;
+              "
+            >
+              <el-switch
+                v-model="currentTable.checked"
+                @change="changeChecked"
+                size="small"
+                style="margin-right: 8px"
+              />
+
+              {{ currentTable.checked ? t('user.disable') : t('user.enable') }}
+            </div>
+          </div>
           <div class="notes">
             {{ $t('about.remark') }}:
             <span :title="currentTable.custom_comment" class="field-notes">{{
@@ -510,6 +548,7 @@ const btnSelectClick = (val: any) => {
             <el-button
               v-if="ds.type !== 'excel'"
               :icon="Refresh"
+              secondary
               style="margin-left: 12px"
               @click="syncFields()"
             >
@@ -779,8 +818,12 @@ const btnSelectClick = (val: any) => {
           display: flex;
           align-items: center;
           padding-left: 8px;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
+
+          &:not(:last-child) {
+            margin-bottom: 2px;
+          }
 
           &.disabled-table {
             background: #dee0e3 !important;
@@ -859,6 +902,8 @@ const btnSelectClick = (val: any) => {
           font-weight: 500;
           font-size: 16px;
           line-height: 24px;
+          display: flex;
+          align-items: center;
         }
 
         .ed-icon {
@@ -925,7 +970,7 @@ const btnSelectClick = (val: any) => {
           background: #ffffff;
           align-items: center;
           border: 1px solid #d0d3d6;
-          border-radius: 4px;
+          border-radius: 6px;
 
           .is-active {
             background: var(--ed-color-primary-1a, #1cba901a);

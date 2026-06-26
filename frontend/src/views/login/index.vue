@@ -41,7 +41,7 @@
                 <el-input
                   v-model="loginForm.username"
                   clearable
-                  :placeholder="$t('common.your_account_email_address')"
+                  :placeholder="$t('login.input_account')"
                   size="large"
                 ></el-input>
               </el-form-item>
@@ -202,7 +202,7 @@ const switchTab = (name: string) => {
           width: 100%;
           height: 40px;
           font-size: 16px;
-          border-radius: 4px;
+          border-radius: 6px;
         }
 
         .agreement {
@@ -217,9 +217,7 @@ const switchTab = (name: string) => {
 .hide-login-container {
   display: none;
 }
-:deep(.ed-input__wrapper) {
-  background-color: #f5f7fa;
-}
+
 .xpack-login-handler-mask {
   position: fixed;
   width: 100vw;

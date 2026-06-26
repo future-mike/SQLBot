@@ -190,6 +190,8 @@ test.py
 
 !/.venv/
 
+sqlbot-xpack
+
 .cursor/
 
 /data/

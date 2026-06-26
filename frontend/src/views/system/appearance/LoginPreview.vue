@@ -40,8 +40,8 @@
           <div class="config-area">
             <div class="login-logo">
               <div class="login-logo-icon">
-                <img height="52" v-if="pageLogin" :src="pageLogin" alt="" />
-                <el-icon size="52" v-else
+                <img v-if="pageLogin" height="52" :src="pageLogin" alt="" />
+                <el-icon v-else size="52"
                   ><custom_small v-if="themeColor !== 'default'"></custom_small>
                   <LOGO_fold v-else></LOGO_fold
                 ></el-icon>
@@ -62,22 +62,14 @@
                 <el-form-item class="login-form-item" prop="username">
                   <el-input
                     readonly
-                    :placeholder="
-                      $t('datasource.please_enter') +
-                      $t('common.empty') +
-                      $t('common.your_account_email_address')
-                    "
+                    :placeholder="$t('common.your_account_email_address')"
                     autofocus
                   />
                 </el-form-item>
                 <el-form-item prop="password">
                   <el-input
                     readonly
-                    :placeholder="
-                      $t('datasource.please_enter') +
-                      $t('common.empty') +
-                      $t('common.enter_your_password')
-                    "
+                    :placeholder="$t('common.enter_your_password')"
                     show-password
                     maxlength="30"
                     show-word-limit
@@ -137,7 +129,7 @@ const pageWeb = computed(() => {
   return !props.web
     ? props.isBlue
       ? logoHeader
-      : '/LOGO-fold.svg'
+      : `${location.pathname}LOGO-fold.svg`
     : props.web.startsWith('blob')
       ? props.web
       : baseUrl + props.web

@@ -2,6 +2,7 @@
 # Date: 2025/7/1
 import json
 from datetime import timedelta
+from typing import Optional
 
 import jwt
 from fastapi import HTTPException, status, APIRouter
@@ -12,9 +13,9 @@ from sqlmodel import select
 
 from apps.chat.api.chat import create_chat, question_answer_inner
 from apps.chat.models.chat_model import ChatMcp, CreateChat, ChatStart, McpQuestion, McpAssistant, ChatQuestion, \
-    ChatFinishStep
+    ChatFinishStep, McpDs
 from apps.datasource.crud.datasource import get_datasource_list
-from apps.system.crud.user import authenticate
+from apps.system.crud.user import authenticate, user_ws_options
 from apps.system.crud.user import get_db_user
 from apps.system.models.system_model import UserWsModel
 from apps.system.models.user import UserModel
@@ -22,7 +23,7 @@ from apps.system.schemas.system_schema import BaseUserDTO, AssistantHeader
 from apps.system.schemas.system_schema import UserInfoDTO
 from common.core import security
 from common.core.config import settings
-from common.core.deps import SessionDep
+from common.core.deps import SessionDep, Trans
 from common.core.schemas import TokenPayload, XOAuth2PasswordBearer, Token
 from common.core.security import create_access_token
 
@@ -80,19 +81,6 @@ def get_user(session: SessionDep, token: str):
     return session_user
 
 
-@router.post("/mcp_ds_list", operation_id="mcp_datasource_list")
-async def datasource_list(session: SessionDep, token: str):
-    session_user = get_user(session, token)
-    return get_datasource_list(session=session, user=session_user)
-
-
-#
-#
-# @router.get("/model_list", operation_id="get_model_list")
-# async def get_model_list(session: SessionDep):
-#     return session.query(AiModelDetail).all()
-
-
 @router.post("/mcp_start", operation_id="mcp_start")
 async def mcp_start(session: SessionDep, chat: ChatStart):
     user: BaseUserDTO = authenticate(session=session, account=chat.username, password=chat.password)
@@ -110,16 +98,76 @@ async def mcp_start(session: SessionDep, chat: ChatStart):
     return {"access_token": t.access_token, "chat_id": c.id}
 
 
-@router.post("/mcp_question", operation_id="mcp_question")
-async def mcp_question(session: SessionDep, chat: McpQuestion):
-    session_user = get_user(session, chat.token)
+@router.post("/mcp_ws_list", operation_id="mcp_ws_list")
+async def ws_list(session: SessionDep, trans: Trans, token: str):
+    session_user = get_user(session, token)
+    return await user_ws_options(session, session_user.id, trans)
 
-    mcp_chat = ChatMcp(token=chat.token, chat_id=chat.chat_id, question=chat.question, datasource_id=chat.datasource_id)
+
+@router.post("/mcp_ds_list", operation_id="mcp_datasource_list")
+async def datasource_list(session: SessionDep, trans: Trans, mcp_ds: McpDs):
+    session_user = get_user(session, mcp_ds.token)
+    if mcp_ds.oid:
+        w_list = await user_ws_options(session, session_user.id, trans)
+        oid_list = [item.id for item in w_list]
+        if int(mcp_ds.oid) not in oid_list:
+            raise HTTPException(status_code=400, detail="The current user is not in the selected workspace")
+
+        session_user.oid = int(mcp_ds.oid)
+    ds_list = get_datasource_list(session=session, user=session_user)
+    result = []
+    for item in ds_list:
+        dic = item.__dict__
+        dic.pop('embedding', None)
+        dic.pop('table_relation', None)
+        dic.pop('recommended_config', None)
+        dic.pop('configuration', None)
+        result.append(dic)
+    return result
+
+
+#
+#
+# @router.get("/model_list", operation_id="get_model_list")
+# async def get_model_list(session: SessionDep):
+#     return session.query(AiModelDetail).all()
+
+
+@router.post("/mcp_question", operation_id="mcp_question")
+async def mcp_question(session: SessionDep, trans: Trans, chat: McpQuestion):
+    session_user = get_user(session, chat.token)
+    lang = chat.lang
+    if lang in ["zh-CN", "zh-TW", "en", "ko-KR"]:
+        session_user.language = lang
+    if chat.oid:
+        w_list = await user_ws_options(session, session_user.id, trans)
+        oid_list = [item.id for item in w_list]
+        if int(chat.oid) not in oid_list:
+            raise HTTPException(status_code=400, detail="The current user is not in the selected workspace")
+
+        session_user.oid = int(chat.oid)
+    ds_id: Optional[int] = None
+    if chat.datasource_id:
+        if isinstance(chat.datasource_id, str):
+            if chat.datasource_id.strip() == "":
+                ds_id = None
+            else:
+                try:
+                    ds_id = int(chat.datasource_id.strip())
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid datasource ID")
+        elif isinstance(chat.datasource_id, int):
+            ds_id = chat.datasource_id
+        else:
+            raise HTTPException(status_code=400, detail="Invalid datasource ID")
+
+    mcp_chat = ChatMcp(token=chat.token, chat_id=chat.chat_id, question=chat.question, datasource_id=ds_id)
 
     return await question_answer_inner(session=session, current_user=session_user, request_question=mcp_chat,
-                                       in_chat=False, stream=chat.stream)
+                                       in_chat=False, stream=chat.stream, return_img=chat.return_img)
 
 
+# Cordys crm
 @router.post("/mcp_assistant", operation_id="mcp_assistant")
 async def mcp_assistant(session: SessionDep, chat: McpAssistant):
     session_user = BaseUserDTO(**{

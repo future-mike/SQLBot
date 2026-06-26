@@ -5,12 +5,10 @@ from typing import Optional
 
 import requests
 from fastapi import FastAPI
-from sqlalchemy import Engine, create_engine
 from sqlmodel import Session, select
 from starlette.middleware.cors import CORSMiddleware
 
-# from apps.datasource.embedding.table_embedding import get_table_embedding
-from apps.datasource.models.datasource import CoreDatasource, DatasourceConf
+from apps.datasource.models.datasource import CoreDatasource
 from apps.datasource.utils.utils import aes_encrypt
 from apps.system.models.system_model import AssistantModel
 from apps.system.schemas.auth import CacheName, CacheNamespace
@@ -19,8 +17,9 @@ from common.core.config import settings
 from common.core.db import engine
 from common.core.sqlbot_cache import cache
 from common.utils.aes_crypto import simple_aes_decrypt
-from common.utils.utils import SQLBotLogUtil, equals_ignore_case, get_domain_list, string_to_numeric_hash
+from common.utils.utils import SQLBotLogUtil, get_domain_list, string_to_numeric_hash
 from common.core.deps import Trans
+from common.core.response_middleware import ResponseMiddleware
 
 
 @cache(namespace=CacheNamespace.EMBEDDED_INFO, cacheName=CacheName.ASSISTANT_INFO, keyExpression="assistant_id")
@@ -87,13 +86,22 @@ def init_dynamic_cors(app: FastAPI):
                             seen.add(domain)
                             unique_domains.append(domain)
             cors_middleware = None
+            response_middleware = None
             for middleware in app.user_middleware:
-                if middleware.cls == CORSMiddleware:
+                if not cors_middleware and middleware.cls == CORSMiddleware:
                     cors_middleware = middleware
+                if not response_middleware and middleware.cls == ResponseMiddleware:
+                    response_middleware = middleware
+                if cors_middleware and response_middleware:
                     break
+
+            updated_origins = list(set(settings.all_cors_origins + unique_domains))
             if cors_middleware:
-                updated_origins = list(set(settings.all_cors_origins + unique_domains))
                 cors_middleware.kwargs['allow_origins'] = updated_origins
+            if response_middleware:
+                for instance in ResponseMiddleware.instances:
+                    instance.update_allow_origins(updated_origins)
+
     except Exception as e:
         return False, e
 
@@ -173,12 +181,13 @@ class AssistantOutDs:
             raise Exception("Datasource list is not found.")
 
     def get_db_schema(self, ds_id: int, question: str = '', embedding: bool = True,
-                      table_list: list[str] = None) -> str:
+                      table_list: list[str] = None) -> tuple[str, list]:
         ds = self.get_ds(ds_id)
         schema_str = ""
         db_name = ds.db_schema if ds.db_schema is not None and ds.db_schema != "" else ds.dataBase
         schema_str += f"【DB_ID】 {db_name}\n【Schema】\n"
         tables = []
+        table_name_list = []
         i = 0
         for table in ds.tables:
             # 如果传入了 table_list，则只处理在列表中的表
@@ -205,6 +214,7 @@ class AssistantOutDs:
             schema_table += '\n]\n'
             t_obj = {"id": i, "schema_table": schema_table}
             tables.append(t_obj)
+            table_name_list.append(table.name)
 
         # do table embedding
         # if embedding and tables and settings.TABLE_EMBEDDING_ENABLED:
@@ -214,7 +224,7 @@ class AssistantOutDs:
             for s in tables:
                 schema_str += s.get('schema_table')
 
-        return schema_str
+        return schema_str, table_name_list
 
     def get_ds(self, ds_id: int, trans: Trans = None):
         if self.ds_list:
@@ -228,11 +238,11 @@ class AssistantOutDs:
 
     def convert2schema(self, ds_dict: dict, config: dict[any]) -> AssistantOutDsSchema:
         id_marker: str = ''
-        attr_list = ['name', 'type', 'host', 'port', 'user', 'dataBase', 'schema']
+        attr_list = ['name', 'type', 'host', 'port', 'user', 'dataBase', 'schema', 'mode', 'lowVersion']
         if config.get('encrypt', False):
             key = config.get('aes_key', None)
             iv = config.get('aes_iv', None)
-            aes_attrs = ['host', 'user', 'password', 'dataBase', 'db_schema', 'schema']
+            aes_attrs = ['host', 'user', 'password', 'dataBase', 'db_schema', 'schema', 'mode', 'lowVersion']
             for attr in aes_attrs:
                 if attr in ds_dict and ds_dict[attr]:
                     try:
@@ -240,7 +250,7 @@ class AssistantOutDs:
                     except Exception as e:
                         raise Exception(
                             f"Failed to encrypt {attr} for datasource {ds_dict.get('name')}, error: {str(e)}")
-        
+
         id = ds_dict.get('id', None)
         if not id:
             for attr in attr_list:
@@ -268,7 +278,9 @@ def get_out_ds_conf(ds: AssistantOutDsSchema, timeout: int = 30) -> str:
         "driver": '',
         "extraJdbc": ds.extraParams or '',
         "dbSchema": ds.db_schema or '',
-        "timeout": timeout or 30
+        "timeout": timeout or 30,
+        "mode": ds.mode or '',
+        "lowVersion": ds.lowVersion or False,
     }
     conf["extraJdbc"] = ''
     return aes_encrypt(json.dumps(conf))

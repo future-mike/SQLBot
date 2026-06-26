@@ -89,7 +89,7 @@
                         :name="ele.type"
                         :show-file-list="false"
                         class="upload-demo"
-                        accept=".jpeg,.jpg,.png,.gif,.svg"
+                        accept=".jpeg,.jpg,.png"
                         :before-upload="(e: any) => beforeUpload(e, ele)"
                         :http-request="uploadImg"
                       >
@@ -163,7 +163,7 @@
                   <div class="navigate-preview" style="height: 425px">
                     <div class="navigate-head">
                       <div class="header-sql">
-                        <img height="30" width="30" v-if="pageLogin" :src="pageLogin" alt="" />
+                        <img v-if="pageLogin" height="30" width="30" :src="pageLogin" alt="" />
                         <custom_small v-else-if="themeColor !== 'default'" class="logo" />
                         <logo v-else></logo>
                         <span style="margin-left: 8px">{{ loginForm.name }}</span>
@@ -260,7 +260,7 @@
                       "
                       type="textarea"
                       show-word-limit
-                      maxlength="50"
+                      maxlength="250"
                     />
                   </div>
                 </div>
@@ -377,8 +377,8 @@ const defaultTopForm = {
   help: 'https://dataease.cn/sqlbot/v1/',
   showDoc: '0',
   showAbout: '0',
-  pc_welcome: '你好，我是 SQLBot ',
-  pc_welcome_desc: `我可以查询数据、生成图表、检测数据异常、预测数据等赶快开启智能问数吧～`,
+  pc_welcome: t('embedded.i_am_sqlbot'),
+  pc_welcome_desc: t('qa.hint_description'),
 }
 
 const topForm = reactive<{

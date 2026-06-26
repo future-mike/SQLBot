@@ -19,13 +19,18 @@ import icon_into_item_outlined from '@/assets/svg/icon_into-item_outlined.svg'
 import icon_window_max_outlined from '@/assets/svg/icon_window-max_outlined.svg'
 import icon_window_mini_outlined from '@/assets/svg/icon_window-mini_outlined.svg'
 import icon_copy_outlined from '@/assets/svg/icon_copy_outlined.svg'
+import ICON_STYLE from '@/assets/svg/icon_style-set_outlined.svg'
+import THOUSAND_SEPARATOR from '@/assets/svg/chart/icon-thousand-separator.svg'
 import { useI18n } from 'vue-i18n'
 import SQLComponent from '@/views/chat/component/SQLComponent.vue'
 import { useAssistantStore } from '@/stores/assistant'
 import AddViewDashboard from '@/views/dashboard/common/AddViewDashboard.vue'
 import html2canvas from 'html2canvas'
 import { chatApi } from '@/api/chat'
+import { useChatConfigStore } from '@/stores/chatConfig.ts'
 
+const chatConfig = useChatConfigStore()
+const showSQLBtn = chatConfig.getShowSQL
 const props = withDefaults(
   defineProps<{
     recordId?: number
@@ -34,6 +39,8 @@ const props = withDefaults(
     chatType?: ChartTypes
     enlarge?: boolean
     loadingData?: boolean
+    thousandsSeparatorList: Array<string>
+    showLabel: boolean
   }>(),
   {
     recordId: undefined,
@@ -41,6 +48,8 @@ const props = withDefaults(
     chatType: undefined,
     enlarge: false,
     loadingData: false,
+    thousandsSeparatorList: () => [],
+    showLabel: false,
   }
 )
 
@@ -48,12 +57,14 @@ const { copy } = useClipboard({ legacy: true })
 const loading = ref<boolean>(false)
 const { t } = useI18n()
 const addViewRef = ref(null)
-const emits = defineEmits(['exitFullScreen'])
+const emits = defineEmits(['exitFullScreen', 'update:thousandsSeparatorList', 'update:showLabel'])
 
 const dataObject = computed<{
   fields: Array<string>
   data: Array<{ [key: string]: any }>
   limit: number | undefined
+  datasource: number | undefined
+  sql: string | undefined
 }>(() => {
   if (props.message?.record?.data) {
     if (typeof props.message?.record?.data === 'string') {
@@ -193,7 +204,15 @@ function reloadChart() {
 
 const dialogVisible = ref(false)
 
+function setHiddenSidebarBtnZIndex(value: string) {
+  const sidebarBtns = document.querySelectorAll('.hidden-sidebar-btn')
+  sidebarBtns.forEach((btn) => {
+    ;(btn as HTMLElement).style.zIndex = value
+  })
+}
+
 function openFullScreen() {
+  setHiddenSidebarBtnZIndex('0')
   dialogVisible.value = true
 }
 
@@ -203,6 +222,7 @@ function closeFullScreen() {
 
 function onExitFullScreen() {
   dialogVisible.value = false
+  setHiddenSidebarBtnZIndex('11')
 }
 
 const sqlShow = ref(false)
@@ -217,6 +237,8 @@ function addToDashboard() {
     data: {
       data: data.value,
     },
+    sql: props.message?.record?.sql,
+    datasource: props.message?.record?.datasource,
     chart: {},
   }
   // @ts-expect-error eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -345,6 +367,29 @@ watch(
     }
   }
 )
+
+const _showLabel = computed({
+  get() {
+    return props.showLabel
+  },
+  set(v) {
+    emits('update:showLabel', v)
+  },
+})
+
+const enableThousandsSeparatorList = computed({
+  get() {
+    return props.thousandsSeparatorList
+  },
+  set(v) {
+    emits('update:thousandsSeparatorList', v)
+  },
+})
+
+const optionList = ref<Array<{ name: string; value: string }>>([])
+function getBaseAxis() {
+  optionList.value = chartRef.value?.getBaseAxis()
+}
 </script>
 
 <template>
@@ -371,7 +416,7 @@ watch(
               :chart-type="chartType"
               :title="t('chat.type')"
               @type-change="onTypeChange"
-            ></ChartPopover>
+            />
           </el-tooltip>
 
           <el-tooltip
@@ -393,7 +438,62 @@ watch(
           </el-tooltip>
         </div>
 
-        <div v-if="message?.record?.sql">
+        <div class="chart-select-container">
+          <template v-if="currentChartType !== 'table'">
+            <el-tooltip
+              effect="dark"
+              :offset="8"
+              :content="_showLabel ? t('chat.hide_label') : t('chat.show_label')"
+              placement="top"
+            >
+              <el-button
+                class="tool-btn"
+                :class="{ 'chart-active': _showLabel }"
+                text
+                @click="_showLabel = !_showLabel"
+              >
+                <el-icon size="16">
+                  <ICON_STYLE />
+                </el-icon>
+              </el-button>
+            </el-tooltip>
+          </template>
+          <el-tooltip
+            effect="dark"
+            :offset="8"
+            :content="t('chat.thousands_separator_setting')"
+            placement="top"
+          >
+            <div>
+              <el-popover placement="bottom" trigger="click">
+                <template #reference>
+                  <el-button class="tool-btn" text @click="getBaseAxis">
+                    <el-icon size="16">
+                      <THOUSAND_SEPARATOR />
+                    </el-icon>
+                  </el-button>
+                </template>
+                <label style="font-weight: 500; line-height: 28px">
+                  {{ t('chat.thousands_separator_display') }}
+                </label>
+                <el-checkbox-group
+                  v-model="enableThousandsSeparatorList"
+                  style="display: flex; flex-direction: column"
+                >
+                  <el-checkbox
+                    v-for="option in optionList"
+                    :key="option.value"
+                    size="large"
+                    :label="option.name"
+                    :value="option.value"
+                  />
+                </el-checkbox-group>
+              </el-popover>
+            </div>
+          </el-tooltip>
+        </div>
+
+        <div v-if="message?.record?.sql && showSQLBtn">
           <el-tooltip effect="dark" :offset="8" :content="t('chat.show_sql')" placement="top">
             <el-button class="tool-btn" text @click="showSql">
               <el-icon size="16">
@@ -498,6 +598,8 @@ watch(
           :message="message"
           :data="data"
           :loading-data="loadingData"
+          :show-label="_showLabel"
+          :thousands-separator-list="enableThousandsSeparatorList"
         />
       </div>
       <div v-if="dataObject.limit" class="over-limit-hint">
@@ -516,7 +618,9 @@ watch(
       body-class="chart-fullscreen-dialog-body"
     >
       <ChartBlock
-        v-if="dialogVisible"
+        v-if="dialogVisible && !enlarge"
+        v-model:show-label="_showLabel"
+        v-model:thousands-separator-list="enableThousandsSeparatorList"
         :message="message"
         :record-id="recordId"
         :is-predict="isPredict"
@@ -561,6 +665,7 @@ watch(
 
 .chart-fullscreen-dialog-body {
   padding: 0;
+  height: 100%;
 }
 
 .chart-sql-drawer-body {
@@ -599,7 +704,7 @@ watch(
       padding-right: 8px;
       margin-bottom: 2px;
       position: relative;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
 
       &:last-child {
@@ -647,6 +752,7 @@ watch(
     border: unset;
     border-radius: unset;
     padding: 0;
+    height: 100%;
 
     .header-bar {
       border-bottom: 1px solid rgba(31, 35, 41, 0.15);
@@ -657,8 +763,7 @@ watch(
     .chart-block {
       margin: unset;
       padding: 16px;
-
-      height: calc(100vh - 56px);
+      height: calc(100% - 56px);
     }
   }
 
